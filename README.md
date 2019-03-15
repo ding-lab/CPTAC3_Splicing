@@ -8,7 +8,8 @@ Create all the necessary packages inside a conda environment:
         python=3.7 \
         ipython \
         snakemake-minimal \
-        star=2.7
+        star=2.7 \
+        samtools=1.9 htslib=1.9
 
 Prepare a case list. For example, `case.list` is the default case list created by:
 
@@ -19,5 +20,10 @@ Prepare a case list. For example, `case.list` is the default case list created b
         | head -n 10 > case.list
 
 ## Run the pipeline
+Link all the required FASTQs:
 
-    snakemake ...
+    snakemake link_cptac_gdc_rna_fastqs
+
+Run STAR alignment on all samples:
+
+    snakemake star_align_all_samples

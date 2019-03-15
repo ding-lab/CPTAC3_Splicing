@@ -9,7 +9,7 @@ CASE_LIST = 'case.list'
 
 GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
 STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
-STAR_GTF = '/diskmnt/Datasets/Reference/GDC/gencode.v29.annotation.gtf.gz'
+STAR_GTF = '/diskmnt/Datasets/Reference/GDC/gencode.v29.annotation.gtf'
 
 # Define cases and samples in use {{{
 CASES = set(open(CASE_LIST).read().splitlines())
@@ -51,6 +51,7 @@ rule link_cptac_gdc_rna_fastqs:
             dst_pth.symlink_to(Path(src_pth))
 
 
+# STAR 2-pass alignment {{{
 rule star_align_pass1:
     """STAR genome alignemnt pass 1 of one sample."""
     input:
@@ -135,8 +136,17 @@ rule star_align_pass2:
         '--outSAMheaderHD @HD VN:1.4 '
         '> {log}'
 
+# }}}
+
 
 rule star_align_all_samples:
     """Run STAR alignment all samples."""
     input: all_bams=expand(rules.star_align_pass2.output['bam'], \
                            sample=[f'{s.case}_{s.sample_type}' for s in SAMPLES])
+
+
+rule samtools_index_bam:
+    """Samtools index one BAM."""
+    input: '{name}.bam'
+    output: '{name}.bam.bai'
+    shell: 'samtools index {input}'

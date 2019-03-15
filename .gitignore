@@ -1,3 +1,4 @@
 .snakemake/
 external_data/
 processed_data/
+logs/
