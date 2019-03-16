@@ -150,3 +150,58 @@ rule samtools_index_bam:
     input: '{name}.bam'
     output: '{name}.bam.bai'
     shell: 'samtools index {input}'
+
+
+rule stringtie_ref_guide_assembly:
+    """Run Stringtie reference guided transcript assembly per sample."""
+    input:
+        bam=rules.star_align_pass2.output['bam'],
+        bai=rules.star_align_pass2.output['bam'] + '.bai',
+        ref_gtf=STAR_GTF
+    output:
+        gtf='processed_data/stringtie/{sample}/transcripts.gtf'
+    params:
+        output_folder='processed_data/stringtie/{sample}'
+    log: 'logs/stringtie/ref_guide_assembly/{sample}.log'
+    threads: 4
+    shell:
+        "stringtie -p {threads} "
+        "-G {input.ref_gtf} "
+        "-l {params.output_folder} "
+        "-M 1.0 "
+        "-o {output.gtf} "
+        "{input.bam} "
+        "2>{log} 1>&2"
+
+
+
+rule create_stringtie_gtf_list:
+    """Collect the path of all per-sample Stringtie assembly GTFs."""
+    input:
+        all_gtfs=expand(rules.stringtie_ref_guide_assembly.output['gtf'], \
+                        sample=[f'{s.case}_{s.sample_type}' for s in SAMPLES])
+    output:
+        gtf_list='processed_data/stringtie/all_assembly_gtfs.list'
+    run:
+        with open(output['gtf_list'], 'w') as f:
+            for gtf_pth in input['all_gtfs']:
+                print(gtf_pth, file=f)
+
+
+rule stringtie_merge_gtfs:
+    """Merge Stringtie assembled GTFs."""
+    input:
+        all_gtfs=rules.create_stringtie_gtf_list.input['all_gtfs'],
+        gtf_list=rules.create_stringtie_gtf_list.output['gtf_list'],
+        ref_gtf=STAR_GTF
+    output: 'processed_data/stringtie/merged.gtf'
+    threads: 8
+    log: 'logs/stringtie/merge_gtf.log'
+    shell:
+        "stringtie --merge "
+        "-p {threads} "
+        "-o {output} "
+        "-G {input.ref_gtf} "
+        "{input.gtf_list} "
+        "2>{log} 1>&2"
+

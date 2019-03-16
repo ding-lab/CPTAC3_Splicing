@@ -8,7 +8,7 @@ Create all the necessary packages inside a conda environment:
         python=3.7 \
         ipython \
         snakemake-minimal \
-        star=2.7 \
+        star=2.7 stringtie=1.3 \
         samtools=1.9 htslib=1.9
 
 Prepare a case list. For example, `case.list` is the default case list created by:
