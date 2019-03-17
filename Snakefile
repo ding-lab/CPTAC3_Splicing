@@ -11,6 +11,17 @@ GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
 STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
 STAR_GTF = '/diskmnt/Datasets/Reference/GDC/gencode.v29.annotation.gtf'
 
+BOWITE_INDEX_PREFIX='/diskmnt/Projects/cptac_scratch/GDC_bowtie1_index/GRCh38_d1_vd1_bowtie1_index'
+# Bowtie1 index was built by
+#
+#   cd /diskmnt/Projects/cptac_scratch
+#   mkdir GDC_bowtie1_index
+#   bowtie-build --threads 8 --seed 201903 \
+#       /diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa \
+#       GDC_bowtie1_index/GRCh38_d1_vd1_bowtie1_index \
+#       2> GDC_bowtie1_index/build_index.log 1>&2
+
+
 # Define cases and samples in use {{{
 CASES = set(open(CASE_LIST).read().splitlines())
 LOCAL_MAP_PTH = Path(MATT_CPTAC3_CATALOG_PTH, f'{SERVER_LOCATION}.BamMap.dat')
@@ -152,6 +163,7 @@ rule samtools_index_bam:
     shell: 'samtools index {input}'
 
 
+# Stringtie reference guided assembly {{{
 rule stringtie_ref_guide_assembly:
     """Run Stringtie reference guided transcript assembly per sample."""
     input:
@@ -204,4 +216,6 @@ rule stringtie_merge_gtfs:
         "-G {input.ref_gtf} "
         "{input.gtf_list} "
         "2>{log} 1>&2"
+
+# }}}
 
