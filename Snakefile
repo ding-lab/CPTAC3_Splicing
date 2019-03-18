@@ -237,15 +237,16 @@ rule mapsplice_alignment:
         ref_gtf=STAR_GTF,
         r1_uncompressed_fq=rules.decompress_rna_fastqs.output['r1_uncompressed_fq'],
         r2_uncompressed_fq=rules.decompress_rna_fastqs.output['r2_uncompressed_fq']
+    output:
+        bam=temp('processed_data/mapsplice/{sample}/alignments.bam'),
+        normal_splice_junction='processed_data/mapsplice/{sample}/junctions.txt',
+        insertion='processed_data/mapsplice/{sample}/insertions.txt'
     params:
         bowtie1_index_prefix=BOWITE_INDEX_PREFIX,
         genome_per_chrom_folder=GENOME_PER_CHROM_FOLDER,
         output_folder='processed_data/mapsplice/{sample}'
     threads: 4
-    output:
-        bam=temp('processed_data/mapsplice/{sample}/alignments.bam'),
-        normal_splice_junction='processed_data/mapsplice/{sample}/junctions.txt',
-        insertion='processed_data/mapsplice/{sample}/insertions.txt'
+    log: 'logs/mapsplice/{sample}.log'
     shell:
         r"""
         mapsplice.py \
@@ -256,7 +257,8 @@ rule mapsplice_alignment:
             -c {params.genome_per_chrom_folder} \
             -x {params.bowtie1_index_prefix} \
             -1 {input.r1_uncompressed_fq} \
-            -2 {input.r2_uncompressed_fq}
+            -2 {input.r2_uncompressed_fq} \
+            2>{log}
         """
 
 
