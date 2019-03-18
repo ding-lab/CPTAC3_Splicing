@@ -11,16 +11,9 @@ GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
 STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
 STAR_GTF = '/diskmnt/Datasets/Reference/GDC/gencode.v29.annotation.gtf'
 
-BOWITE_INDEX_PREFIX='/diskmnt/Projects/cptac_scratch/GDC_bowtie1_index/GRCh38_d1_vd1_bowtie1_index'
-# Bowtie1 index was built by
-#
-#   cd /diskmnt/Projects/cptac_scratch
-#   mkdir GDC_bowtie1_index
-#   bowtie-build --threads 8 --seed 201903 \
-#       /diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa \
-#       GDC_bowtie1_index/GRCh38_d1_vd1_bowtie1_index \
-#       2> GDC_bowtie1_index/build_index.log 1>&2
-
+# See README.md for instructions of how to build the Bowtie1 index and per chromsome FASTAs
+BOWITE_INDEX_PREFIX = '/diskmnt/Projects/cptac_scratch/GDC_bowtie1_index.alt/GRCh38_d1_vd1_bowtie1_index'
+GENOME_PER_CHROM_FOLDER = '/diskmnt/Projects/cptac_scratch/GRCh38.d1.vd1_per_chrom'
 
 # Define cases and samples in use {{{
 CASES = set(open(CASE_LIST).read().splitlines())
@@ -151,7 +144,7 @@ rule star_align_pass2:
 
 
 rule star_align_all_samples:
-    """Run STAR alignment all samples."""
+    """Run STAR alignment on all samples."""
     input: all_bams=expand(rules.star_align_pass2.output['bam'], \
                            sample=[f'{s.case}_{s.sample_type}' for s in SAMPLES])
 
@@ -219,3 +212,71 @@ rule stringtie_merge_gtfs:
 
 # }}}
 
+
+# MapSplice2 {{{
+rule decompress_rna_fastqs:
+    """Decompress the paired RNA FASTQs of a sample."""
+    input:
+        r1_fq='external_data/GDC_RNA_fq/{sample}.R1.fastq.gz',
+        r2_fq='external_data/GDC_RNA_fq/{sample}.R2.fastq.gz'
+    output:
+        r1_uncompressed_fq=temp('processed_data/uncompressed_RNA_fq/{sample}.R1.fastq'),
+        r2_uncompressed_fq=temp('processed_data/uncompressed_RNA_fq/{sample}.R2.fastq')
+    resources:
+        io_heavy=1
+    shell:
+        """
+        gunzip -c {input.r1_fq} > {output.r1_uncompressed_fq}
+        gunzip -c {input.r2_fq} > {output.r2_uncompressed_fq}
+        """
+
+
+rule mapsplice_alignment:
+    """Run MapSplice2 to align RNA-seq reads of one sample."""
+    input:
+        ref_gtf=STAR_GTF,
+        r1_uncompressed_fq=rules.decompress_rna_fastqs.output['r1_uncompressed_fq'],
+        r2_uncompressed_fq=rules.decompress_rna_fastqs.output['r2_uncompressed_fq']
+    params:
+        bowtie1_index_prefix=BOWITE_INDEX_PREFIX,
+        genome_per_chrom_folder=GENOME_PER_CHROM_FOLDER,
+        output_folder='processed_data/mapsplice/{sample}'
+    threads: 4
+    output:
+        bam=temp('processed_data/mapsplice/{sample}/alignments.bam'),
+        normal_splice_junction='processed_data/mapsplice/{sample}/junctions.txt',
+        insertion='processed_data/mapsplice/{sample}/insertions.txt'
+    shell:
+        r"""
+        mapsplice.py \
+            -p {threads} \
+            -o {params.output_folder} \
+            --bam \
+            --gene-gtf {input.ref_gtf} \
+            -c {params.genome_per_chrom_folder} \
+            -x {params.bowtie1_index_prefix} \
+            -1 {input.r1_uncompressed_fq} \
+            -2 {input.r2_uncompressed_fq}
+        """
+
+
+rule sort_mapsplice_bam:
+    """Sort MapSplice BAM of one sample."""
+    input: bam=rules.mapsplice_alignment.output['bam']
+    output: bam='processed_data/mapsplice/{sample}/alignments.sorted.bam'
+    threads: 4
+    resources:
+        io_heavy=1,
+        mem_mb=12000  # Use 12GB of RAM
+    shell:
+        "samtools sort -m {resources.mem_mb}M -@ {threads} -o {output.bam} {input.bam}"
+
+# }}}
+
+
+rule mapsplice_all_samples:
+    """Run MapSplice alignment on all samples."""
+    input: all_bams=expand(rules.sort_mapsplice_bam.output['bam'], \
+                           sample=[f'{s.case}_{s.sample_type}' for s in SAMPLES]),
+           all_bais=expand(rules.sort_mapsplice_bam.output['bam'] + '.bai', \
+                           sample=[f'{s.case}_{s.sample_type}' for s in SAMPLES])
