@@ -6,6 +6,7 @@ import re
 MATT_CPTAC3_CATALOG_PTH = '/home/mwyczalk_test/Projects/CPTAC3/CPTAC3.catalog'
 SERVER_LOCATION = 'katmai'
 CASE_LIST = 'case.list'
+MAPSPLICE_BIN = '/diskmnt/Projects/Users/lwang/miniconda3/envs/mapsplice/bin/mapsplice.py'
 
 GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
 STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
@@ -249,7 +250,7 @@ rule mapsplice_alignment:
     log: 'logs/mapsplice/{sample}.log'
     shell:
         r"""
-        mapsplice.py \
+        {MAPSPLICE_BIN} \
             -p {threads} \
             -o {params.output_folder} \
             --bam \

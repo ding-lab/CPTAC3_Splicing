@@ -14,8 +14,12 @@ Create all the necessary packages inside a conda environment:
         snakemake-minimal \
         star=2.7 stringtie=1.3 \
         samtools=1.9 htslib=1.9 \
-        mapsplice=2.2 \
         gffcompare=0.10
+
+    conda create -n mapsplice mapsplice=2.2
+
+Note that MapSplice cannot be installed in the same environment since it
+overwrites samtools binary.
 
 Prepare a case list. For example, `case.list` is the default case list created by:
 
