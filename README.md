@@ -1,4 +1,8 @@
 # CPTAC3 RNA-seq splicing/transcript pipeline
+This pipeline finds all the transcripts (splice junctions) expressed in each sample. It run two sets of tools:
+
+- STAR + StringTie
+- MapSplice
 
 
 
@@ -7,7 +11,6 @@ Create all the necessary packages inside a conda environment:
 
     conda create -n cptac3_splice \
         python=3.7 \
-        ipython \
         snakemake-minimal \
         star=2.7 stringtie=1.3 \
         samtools=1.9 htslib=1.9 \
@@ -54,7 +57,7 @@ Run StringTie novel transcript discovery of all samples:
 
     snakemake stringtie_merge_gtfs
 
-Transcript GTFs will be available at:
+StringTie will produce the following transcript GTFs:
 - Per sample at `processed_data/stringtie/{sample}/transcripts.gtf`
 - All samples merged at `processed_data/stringtie/merged.gtf`
 
@@ -88,3 +91,16 @@ Then we build the Bowtie1 index by:
 Run MapSplice alignment on all samples:
 
     snakemake mapsplice_all_samples
+
+MapSplice will produce the following BAMs and splicing junctions per sample:
+- BAM at `processed_data/mapsplice/{sample}/alignments.sorted.bam`
+- Junction at `processed_data/mapsplice/{sample}/junctions.txt`
+
+
+
+## Annotations
+The pipeline uses GDC hg38 genome reference `GRCh38.d1.vd1`.
+
+STAR, StringTie, and MapSplice all use the same transcript annotation, GENCODE v29 comprehensive annotations on reference chromosomes only (CHR) ([link][gencode-gtf]).
+
+[gencode-gtf]: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/gencode.v29.annotation.gtf.gz
