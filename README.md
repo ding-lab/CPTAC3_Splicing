@@ -82,7 +82,7 @@ MapSplice will produce the following BAMs and splicing junctions per sample:
 ## Annotations
 The pipeline uses GDC hg38 genome reference `GRCh38.d1.vd1`.
 
-STAR, StringTie, and MapSplice all use the same transcript annotation, GENCODE v29 comprehensive annotations on reference chromosomes only (CHR) ([link][gencode-gtf]).
+STAR, StringTie, and MapSplice all use the same transcript annotation, GENCODE v29 comprehensive annotations on reference chromosomes only (CHR) ([GTF link][gencode-gtf]).
 
 [gencode-gtf]: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/gencode.v29.annotation.gtf.gz
 
