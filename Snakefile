@@ -5,7 +5,7 @@ import re
 
 MATT_CPTAC3_CATALOG_PTH = '/home/mwyczalk_test/Projects/CPTAC3/CPTAC3.catalog'
 SERVER_LOCATION = 'katmai'
-CASE_LIST = 'case.list'
+CASE_LIST_PTH = 'case.list'
 MAPSPLICE_BIN = '/diskmnt/Projects/Users/lwang/miniconda3/envs/mapsplice/bin/mapsplice.py'
 
 GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
@@ -17,7 +17,7 @@ BOWITE_INDEX_PREFIX = '/diskmnt/Projects/cptac_scratch/GDC_bowtie1_index.alt/GRC
 GENOME_PER_CHROM_FOLDER = '/diskmnt/Projects/cptac_scratch/GRCh38.d1.vd1_per_chrom'
 
 # Define cases and samples in use {{{
-CASES = set(open(CASE_LIST).read().splitlines())
+CASES = set(open(CASE_LIST_PTH).read().splitlines())
 LOCAL_MAP_PTH = Path(MATT_CPTAC3_CATALOG_PTH, f'{SERVER_LOCATION}.BamMap.dat')
 # Define Sample object
 Sample = namedtuple('Sample', 'case sample_type')
