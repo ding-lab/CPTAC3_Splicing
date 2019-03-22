@@ -19,9 +19,11 @@ Create all the necessary packages inside a conda environment:
     conda create -n mapsplice mapsplice=2.2
 
 Note that MapSplice cannot be installed in the same environment since it
-overwrites samtools binary.
+overwrites the samtools binary and break the downstream commands.
 
-Prepare a case list. For example, `case.list` is the default case list created by:
+Prepare a list of cases to run the pipeline. The pipeline will run all the
+samples belong to the listed case. Then set the `CASE_LIST_PTH` variable inside
+`Snakefile`.  For example, `case.list` is the default case list created by:
 
     # First 10 GBM samples in the Y2.b1 batch
     rg 'Y2.b1' /home/mwyczalk_test/Projects/CPTAC3/CPTAC3.catalog/CPTAC3.cases.dat \
@@ -67,6 +69,25 @@ StringTie will produce the following transcript GTFs:
 
 
 ### MapSplice2
+Run MapSplice alignment on all samples:
+
+    snakemake mapsplice_all_samples
+
+MapSplice will produce the following BAMs and splicing junctions per sample:
+- BAM at `processed_data/mapsplice/{sample}/alignments.sorted.bam`
+- Junction at `processed_data/mapsplice/{sample}/junctions.txt`
+
+
+
+## Annotations
+The pipeline uses GDC hg38 genome reference `GRCh38.d1.vd1`.
+
+STAR, StringTie, and MapSplice all use the same transcript annotation, GENCODE v29 comprehensive annotations on reference chromosomes only (CHR) ([link][gencode-gtf]).
+
+[gencode-gtf]: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/gencode.v29.annotation.gtf.gz
+
+
+### Genome reference files for  MapSplice
 MapSplice requires the reference chromosomes to be stored in individual FASTA
 files, which can be done by the script at `scripts/split_genome_fa_per_chrom.sh`:
 
@@ -92,19 +113,3 @@ Then we build the Bowtie1 index by:
         GDC_bowtie1_index.alt/GRCh38_d1_vd1_bowtie1_index \
         2> GDC_bowtie1_index.alt/build_index.log 1>&2
 
-Run MapSplice alignment on all samples:
-
-    snakemake mapsplice_all_samples
-
-MapSplice will produce the following BAMs and splicing junctions per sample:
-- BAM at `processed_data/mapsplice/{sample}/alignments.sorted.bam`
-- Junction at `processed_data/mapsplice/{sample}/junctions.txt`
-
-
-
-## Annotations
-The pipeline uses GDC hg38 genome reference `GRCh38.d1.vd1`.
-
-STAR, StringTie, and MapSplice all use the same transcript annotation, GENCODE v29 comprehensive annotations on reference chromosomes only (CHR) ([link][gencode-gtf]).
-
-[gencode-gtf]: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/gencode.v29.annotation.gtf.gz
