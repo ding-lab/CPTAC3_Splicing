@@ -39,9 +39,11 @@ The pipeline defines two resources:
 - `io_heavy`: Maximal number of concurrent IO heavy tasks
 
 Specify the limits while running any snakemake job. For example, to use 100GB
-of memory and 4 concurrent IO heavy tasks using 20 CPU cores,
+of memory and 4 concurrent IO heavy tasks using 20 CPU cores. Sometimes, the
+`--` is required prior to the rule name and after all the specificed snakemake
+options.
 
-    snakemake -j20 --resources mem_mb=100000 io_heavy=4 ...
+    snakemake -j20 --resources mem_mb=100000 io_heavy=4 -- ...
 
 List all the available commands by
 
