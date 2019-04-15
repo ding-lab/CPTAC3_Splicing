@@ -2,3 +2,5 @@
 external_data/
 processed_data/
 logs/
+*.log
+nohup.out

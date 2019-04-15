@@ -9,8 +9,9 @@ CASE_LIST_PTH = 'case.list'
 MAPSPLICE_BIN = '/diskmnt/Projects/Users/lwang/miniconda3/envs/mapsplice/bin/mapsplice.py'
 
 GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
-STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
-STAR_GTF = '/diskmnt/Datasets/Reference/GDC/gencode.v29.annotation.gtf'
+#STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
+STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/STAR/star_genome_d1_vd1_gencode_comp_chr_v29'
+STAR_GTF = '/diskmnt/Datasets/Reference/STAR/gencode.v29.annotation.gtf'
 
 # See README.md for instructions of how to build the Bowtie1 index and per chromsome FASTAs
 BOWITE_INDEX_PREFIX = '/diskmnt/Projects/cptac_scratch/GDC_bowtie1_index.alt/GRCh38_d1_vd1_bowtie1_index'
@@ -100,8 +101,8 @@ rule star_align_pass2:
     input:
         r1_fq='external_data/GDC_RNA_fq/{sample}.R1.fastq.gz',
         r2_fq='external_data/GDC_RNA_fq/{sample}.R2.fastq.gz',
-        all_pass1_sj_tabs=expand(rules.star_align_pass1.output['sj'], \
-                                 sample=[f'{s.case}_{s.sample_type}' for s in SAMPLES])
+        pass1_sj_tabs='processed_data/star/{sample}/pass1/SJ.out.tab'
+
     output:
         bam='processed_data/star/{sample}/pass2/Aligned.sortedByCoord.out.bam'
     params:
@@ -121,19 +122,31 @@ rule star_align_pass2:
         '--outFilterMultimapScoreRange 1 '
         '--outFilterMultimapNmax 20 '
         '--outFilterMismatchNmax 10 '
-        '--alignIntronMax 500000 '
+        # '--alignIntronMax 500000 '
+        '--alignIntronMax 1000000 '
+        '--alignIntronMin 20 '
+        '--alignSJoverhangMin 8 '
+        '--chimJunctionOverhangMin 15 '
+        '--chimMainSegmentMultNmax 1 '
+        '--chimOutType Junctions SeparateSAMold WithinBAM SoftClip '
+        '--chimSegmentMin 15 '
         '--alignMatesGapMax 1000000 '
         '--sjdbScore 2 '
         '--alignSJDBoverhangMin 1 '
         '--genomeLoad NoSharedMemory '
+        '--outFilterIntronMotifs None '
+        '--outFilterMismatchNoverLmax 0.1 '
         '--outFilterMatchNminOverLread 0.33 '
         '--outFilterScoreMinOverLread 0.33 '
+        '--outFilterType BySJout '
         '--sjdbOverhang 100 '
         # Pass SJ tabs of all samples (main difference to PASS 1)
-        '--sjdbFileChrStartEnd {input.all_pass1_sj_tabs} '
+        '--sjdbFileChrStartEnd {input.pass1_sj_tabs} '
+        '--limitSjdbInsertNsj 3100000'
         '--limitBAMsortRAM 0 '
         '--outSAMstrandField intronMotif '
-        '--outSAMattributes NH HI NM MD AS XS '
+        # '--outSAMattributes NH HI NM MD AS XS '
+        '--outSAMattributes NH HI AS nM NM ch '
         '--outSAMunmapped Within '
         '--outSAMtype BAM SortedByCoordinate '
         # Add SAM version number (likely no effect on anything)

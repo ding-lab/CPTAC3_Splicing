@@ -12,7 +12,7 @@ Create all the necessary packages inside a conda environment:
     conda create -n cptac3_splice \
         python=3.7 \
         snakemake-minimal \
-        star=2.7 stringtie=1.3 \
+        star=2.6.1d stringtie=1.3 \
         samtools=1.9 htslib=1.9 \
         gffcompare=0.10
 
@@ -39,11 +39,9 @@ The pipeline defines two resources:
 - `io_heavy`: Maximal number of concurrent IO heavy tasks
 
 Specify the limits while running any snakemake job. For example, to use 100GB
-of memory and 4 concurrent IO heavy tasks using 20 CPU cores. Sometimes, the
-`--` is required prior to the rule name and after all the specificed snakemake
-options.
+of memory and 4 concurrent IO heavy tasks using 20 CPU cores,
 
-    snakemake -j20 --resources mem_mb=100000 io_heavy=4 -- ...
+    snakemake -j20 --resources mem_mb=100000 io_heavy=4 ...
 
 List all the available commands by
 
@@ -114,4 +112,5 @@ Then we build the Bowtie1 index by:
         GDC_bowtie1_index.alt/GRCh38.d1.vd1.fa \
         GDC_bowtie1_index.alt/GRCh38_d1_vd1_bowtie1_index \
         2> GDC_bowtie1_index.alt/build_index.log 1>&2
+
 
