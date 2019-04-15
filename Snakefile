@@ -9,7 +9,9 @@ CASE_LIST_PTH = 'case.list'
 MAPSPLICE_BIN = '/diskmnt/Projects/Users/lwang/miniconda3/envs/mapsplice/bin/mapsplice.py'
 
 GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
-#STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
+# Note that the STAR index might be rebuilt to match the STAR version.
+# See /diskmnt/Datasets/Reference/STAR/README.md
+# about how to build the STAR index.
 STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/STAR/star_genome_d1_vd1_gencode_comp_chr_v29'
 STAR_GTF = '/diskmnt/Datasets/Reference/STAR/gencode.v29.annotation.gtf'
 
@@ -122,8 +124,7 @@ rule star_align_pass2:
         '--outFilterMultimapScoreRange 1 '
         '--outFilterMultimapNmax 20 '
         '--outFilterMismatchNmax 10 '
-        # '--alignIntronMax 500000 '
-        '--alignIntronMax 1000000 '
+        '--alignIntronMax 1000000 '  # Set to 500k will fail
         '--alignIntronMin 20 '
         '--alignSJoverhangMin 8 '
         '--chimJunctionOverhangMin 15 '
@@ -140,7 +141,8 @@ rule star_align_pass2:
         '--outFilterScoreMinOverLread 0.33 '
         '--outFilterType BySJout '
         '--sjdbOverhang 100 '
-        # Pass SJ tabs of all samples (main difference to PASS 1)
+        # Note that since passing all the SJ tabs take too long and it often crashes,
+        # we only use the SJ tab of the given sample.
         '--sjdbFileChrStartEnd {input.pass1_sj_tabs} '
         '--limitSjdbInsertNsj 3100000'
         '--limitBAMsortRAM 0 '
