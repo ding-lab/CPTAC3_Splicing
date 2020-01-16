@@ -1,8 +1,12 @@
 # CPTAC3 RNA-seq splicing/transcript pipeline
-This pipeline finds all the transcripts (splice junctions) expressed in each sample. It run two sets of tools:
+
+version 1.2
+	Y2.b3 was run on version 1.1; currently updated to version 1.2
+	in version 1.2,  bam files are automatically remove once the analysis for a given sample is complete; output is not affected
+
+This pipeline finds all the transcripts (splice junctions) expressed in each sample. It runs the following set of tools:
 
 - STAR + StringTie
-- MapSplice
 
 
 
@@ -16,20 +20,13 @@ Create all the necessary packages inside a conda environment:
         samtools=1.9 htslib=1.9 \
         gffcompare=0.10
 
-    conda create -n mapsplice mapsplice=2.2
 
-Note that MapSplice cannot be installed in the same environment since it
-overwrites the samtools binary and break the downstream commands.
 
 Prepare a list of cases to run the pipeline. The pipeline will run all the
 samples belong to the listed case. Then set the `CASE_LIST_PTH` variable inside
-`Snakefile`.  For example, `case.list` is the default case list created by:
+`Snakefile`.  For example, `case.list` in year2 batch4 is created by:
 
-    # First 10 GBM samples in the Y2.b1 batch
-    rg 'Y2.b1' /home/mwyczalk_test/Projects/CPTAC3/CPTAC3.catalog/CPTAC3.cases.dat \
-        | rg 'GBM' \
-        | cut -f1 \
-        | head -n 10 > case.list
+    # 	cat /home/mwyczalk_test/Projects/CPTAC3/CPTAC3.catalog/CPTAC3.cases.dat |grep "Y2.b4-RNA"|cut -f 1 > case.list
 
 
 
@@ -39,11 +36,9 @@ The pipeline defines two resources:
 - `io_heavy`: Maximal number of concurrent IO heavy tasks
 
 Specify the limits while running any snakemake job. For example, to use 100GB
-of memory and 4 concurrent IO heavy tasks using 20 CPU cores. In some
-occasions, `--` is required  in front of the specified rules to mark the end of
-all the given snakemake options. For example,
+of memory and 4 concurrent IO heavy tasks using 20 CPU cores,
 
-    snakemake -j20 --resources mem_mb=100000 io_heavy=4 -- star_align_all_samples
+    snakemake -j20 --resources mem_mb=100000 io_heavy=4 ...
 
 List all the available commands by
 
@@ -70,16 +65,6 @@ StringTie will produce the following transcript GTFs:
 - All samples merged at `processed_data/stringtie/merged.gtf`
 
 
-### MapSplice2
-Run MapSplice alignment on all samples:
-
-    snakemake mapsplice_all_samples
-
-MapSplice will produce the following BAMs and splicing junctions per sample:
-- BAM at `processed_data/mapsplice/{sample}/alignments.sorted.bam`
-- Junction at `processed_data/mapsplice/{sample}/junctions.txt`
-
-
 
 ## Annotations
 The pipeline uses GDC hg38 genome reference `GRCh38.d1.vd1`.
@@ -89,29 +74,11 @@ STAR, StringTie, and MapSplice all use the same transcript annotation, GENCODE v
 [gencode-gtf]: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/gencode.v29.annotation.gtf.gz
 
 
-### Genome reference files for  MapSplice
-MapSplice requires the reference chromosomes to be stored in individual FASTA
-files, which can be done by the script at `scripts/split_genome_fa_per_chrom.sh`:
 
-    bash scripts/split_genome_fa_per_chrom.sh
+## Version Change Catalogs
+version 1.0 - 1.2 all utlizes star and stringtie for the final output; version changes for the pipeline does not affect the the result of the final output
 
-By default the per chromosome FASTAs are stored at
-`/diskmnt/Projects/cptac_scratch/GRCh38.d1.vd1_per_chrom`.
-
-MapSplice requires Bowtie1 index for alignment. Since MapSplice can only take
-FASTA witout any other annotation in the header, we strip all the annotations
-in the FASTA file first by
-
-    sed -r 's/^(>[^ ]+) .*$/\1/' \
-        /diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa \
-        > GDC_bowtie1_index.alt/GRCh38.d1.vd1.fa
-
-Then we build the Bowtie1 index by:
-
-    cd /diskmnt/Projects/cptac_scratch
-    mkdir GDC_bowtie1_index.alt
-    bowtie-build --threads 8 --seed 201903 \
-        GDC_bowtie1_index.alt/GRCh38.d1.vd1.fa \
-        GDC_bowtie1_index.alt/GRCh38_d1_vd1_bowtie1_index \
-        2> GDC_bowtie1_index.alt/build_index.log 1>&2
+In version 1.0, processed data are organized by tools (star, stringtie), such that the folder structure is ./processed_data/${tool_name}/${sample_name}_${tissue_type}
+In version 1.1, processed data are organized by samples, such that the folder structure is ./processed_data/${sample_name}_${tissue_type}/${tool_name}
+In version 1.2, processed data are organized by samples, such that the folder struccutre is ./processed_data/${sample_name}_${tissue_type}/${tool_name}; all the intermediate bam files are removed after job is done so as to free up the space:wq
 

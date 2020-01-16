@@ -6,12 +6,10 @@ import re
 MATT_CPTAC3_CATALOG_PTH = '/home/mwyczalk_test/Projects/CPTAC3/CPTAC3.catalog'
 SERVER_LOCATION = 'katmai'
 CASE_LIST_PTH = 'case.list'
-MAPSPLICE_BIN = '/diskmnt/Projects/Users/lwang/miniconda3/envs/mapsplice/bin/mapsplice.py'
+MAPSPLICE_BIN = '/diskmnt/Projects/Users/rliu/Software/anaconda3/envs/mapsplice/bin/mapsplice.py'
 
 GENOME_FA = '/diskmnt/Datasets/Reference/GRCh38.d1.vd1/GRCh38.d1.vd1.fa'
-# Note that the STAR index might be rebuilt to match the STAR version.
-# See /diskmnt/Datasets/Reference/STAR/README.md
-# about how to build the STAR index.
+#STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/GDC/star_genome_d1_vd1_gencode_comp_chr_v29'
 STAR_INDEX_FOLDER = '/diskmnt/Datasets/Reference/STAR/star_genome_d1_vd1_gencode_comp_chr_v29'
 STAR_GTF = '/diskmnt/Datasets/Reference/STAR/gencode.v29.annotation.gtf'
 
@@ -30,7 +28,7 @@ SAMPLES = set()
 with open(LOCAL_MAP_PTH) as f:
     reader = csv.DictReader(f, dialect='excel-tab')
     for row in reader:
-        if row['case'] in CASES and row['experimental_strategy'] == 'RNA-Seq':
+        if row['case'] in CASES and row['experimental_strategy'] == 'RNA-Seq' and row['data_format'] == 'FASTQ':
             s = Sample(row['case'], row['sample_type'])
             SAMPLES.add(s)
 # }}}
@@ -39,7 +37,7 @@ with open(LOCAL_MAP_PTH) as f:
 rule link_cptac_gdc_rna_fastqs:
     """Link the CPTAC RNA-seq FASTQs locally."""
     input: local_map=LOCAL_MAP_PTH
-    output: expand('external_data/GDC_RNA_fq/{s.case}_{s.sample_type}.{read}.fastq.gz', \
+    output: expand('external_data/{s.case}_{s.sample_type}.{read}.fastq.gz', \
                    s=SAMPLES, read=['R1', 'R2'])
     run:
         reader = csv.DictReader(open(input['local_map']), dialect='excel-tab')
@@ -54,7 +52,7 @@ rule link_cptac_gdc_rna_fastqs:
             read = re.search(r'\.(R1|R2)\.\w+$', row['# sample_name']).group(1)
             src_pth = Path(row['data_path'])
             assert src_pth.exists()   # make sure the FASTQ file exists
-            dst_pth = Path(f'external_data/GDC_RNA_fq/'
+            dst_pth = Path(f'external_data/'
                            f'{s.case}_{s.sample_type}.{read}.fastq.gz')
             dst_pth.symlink_to(Path(src_pth))
 
@@ -63,15 +61,15 @@ rule link_cptac_gdc_rna_fastqs:
 rule star_align_pass1:
     """STAR genome alignemnt pass 1 of one sample."""
     input:
-        r1_fq='external_data/GDC_RNA_fq/{sample}.R1.fastq.gz',
-        r2_fq='external_data/GDC_RNA_fq/{sample}.R2.fastq.gz'
+        r1_fq='external_data/{sample}.R1.fastq.gz',
+        r2_fq='external_data/{sample}.R2.fastq.gz'
     output:
-        sj='processed_data/star/{sample}/pass1/SJ.out.tab'
+        sj='processed_data/{sample}/star/pass1/SJ.out.tab'
     params:
         star_ix=STAR_INDEX_FOLDER,
         star_gtf=STAR_GTF,
-        out_folder='processed_data/star/{sample}/pass1/'
-    log: 'logs/star_pass1/{sample}.log'
+        out_folder='processed_data/{sample}/star/pass1/'
+    log: 'logs/{sample}/star_pass1.log'
     threads: 4
     shell:
         # Follow the GDC's parameters
@@ -101,17 +99,17 @@ rule star_align_pass1:
 rule star_align_pass2:
     """STAR genome alignemnt pass 2 of one sample."""
     input:
-        r1_fq='external_data/GDC_RNA_fq/{sample}.R1.fastq.gz',
-        r2_fq='external_data/GDC_RNA_fq/{sample}.R2.fastq.gz',
-        pass1_sj_tabs='processed_data/star/{sample}/pass1/SJ.out.tab'
+        r1_fq='external_data/{sample}.R1.fastq.gz',
+        r2_fq='external_data/{sample}.R2.fastq.gz',
+        pass1_sj_tabs='processed_data/{sample}/star/pass1/SJ.out.tab'
 
     output:
-        bam='processed_data/star/{sample}/pass2/Aligned.sortedByCoord.out.bam'
+        bam=temp('processed_data/{sample}/star/pass2/Aligned.sortedByCoord.out.bam')
     params:
         star_ix=STAR_INDEX_FOLDER,
         star_gtf=STAR_GTF,
-        out_folder='processed_data/star/{sample}/pass2/'
-    log: 'logs/star_pass2/{sample}.log'
+        out_folder='processed_data/{sample}/star/pass2/'
+    log: 'logs/{sample}/star_pass2.log'
     threads: 4
     shell:
         # Run the same command as pass1, but passing the split junction tabs of all samples
@@ -124,7 +122,8 @@ rule star_align_pass2:
         '--outFilterMultimapScoreRange 1 '
         '--outFilterMultimapNmax 20 '
         '--outFilterMismatchNmax 10 '
-        '--alignIntronMax 1000000 '  # Set to 500k will fail
+        # '--alignIntronMax 500000 '
+        '--alignIntronMax 1000000 '
         '--alignIntronMin 20 '
         '--alignSJoverhangMin 8 '
         '--chimJunctionOverhangMin 15 '
@@ -141,8 +140,7 @@ rule star_align_pass2:
         '--outFilterScoreMinOverLread 0.33 '
         '--outFilterType BySJout '
         '--sjdbOverhang 100 '
-        # Note that since passing all the SJ tabs take too long and it often crashes,
-        # we only use the SJ tab of the given sample.
+        # Pass SJ tabs of all samples (main difference to PASS 1)
         '--sjdbFileChrStartEnd {input.pass1_sj_tabs} '
         '--limitSjdbInsertNsj 3100000'
         '--limitBAMsortRAM 0 '
@@ -180,10 +178,10 @@ rule stringtie_ref_guide_assembly:
         bai=rules.star_align_pass2.output['bam'] + '.bai',
         ref_gtf=STAR_GTF
     output:
-        gtf='processed_data/stringtie/{sample}/transcripts.gtf'
+        gtf='processed_data/{sample}/stringtie/transcripts.gtf'
     params:
-        output_folder='processed_data/stringtie/{sample}'
-    log: 'logs/stringtie/ref_guide_assembly/{sample}.log'
+        output_folder='processed_data/{sample}/stringtie'
+    log: 'logs/{sample}/stringtie/ref_guide_assembly.log'
     threads: 4
     shell:
         "stringtie -p {threads} "
@@ -202,7 +200,7 @@ rule create_stringtie_gtf_list:
         all_gtfs=expand(rules.stringtie_ref_guide_assembly.output['gtf'], \
                         sample=[f'{s.case}_{s.sample_type}' for s in SAMPLES])
     output:
-        gtf_list='processed_data/stringtie/all_assembly_gtfs.list'
+        gtf_list='processed_data/all_assembly/stringtie/all_assembly_gtfs.list'
     run:
         with open(output['gtf_list'], 'w') as f:
             for gtf_pth in input['all_gtfs']:
@@ -215,9 +213,9 @@ rule stringtie_merge_gtfs:
         all_gtfs=rules.create_stringtie_gtf_list.input['all_gtfs'],
         gtf_list=rules.create_stringtie_gtf_list.output['gtf_list'],
         ref_gtf=STAR_GTF
-    output: 'processed_data/stringtie/merged.gtf'
+    output: 'processed_data/all_assembly/stringtie/merged.gtf'
     threads: 8
-    log: 'logs/stringtie/merge_gtf.log'
+    log: 'logs/all_assembly/stringtie/merge_gtf.log'
     shell:
         "stringtie --merge "
         "-p {threads} "
@@ -233,8 +231,8 @@ rule stringtie_merge_gtfs:
 rule decompress_rna_fastqs:
     """Decompress the paired RNA FASTQs of a sample."""
     input:
-        r1_fq='external_data/GDC_RNA_fq/{sample}.R1.fastq.gz',
-        r2_fq='external_data/GDC_RNA_fq/{sample}.R2.fastq.gz'
+        r1_fq='external_data/{sample}.R1.fastq.gz',
+        r2_fq='external_data/{sample}.R2.fastq.gz'
     output:
         r1_uncompressed_fq=temp('processed_data/uncompressed_RNA_fq/{sample}.R1.fastq'),
         r2_uncompressed_fq=temp('processed_data/uncompressed_RNA_fq/{sample}.R2.fastq')
